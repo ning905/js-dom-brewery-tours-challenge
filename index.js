@@ -1,12 +1,14 @@
 const apiURL = "https://api.openbrewerydb.org/breweries";
 const breweriesUL = document.querySelector("#breweries-list");
-const stateForm = document.querySelector("#select-state-form");
+const searchByStateForm = document.querySelector("#select-state-form");
 const typeFilter = document.querySelector("#filter-by-type");
 
 const state = {
   allowedBreweryTypes: ["micro", "brewpub", "regional"],
   usState: "",
   breweries: [],
+  cities: [],
+  citiesCheckBoxList: [],
 };
 
 function setState(newState) {
@@ -84,11 +86,7 @@ function init() {
     });
 }
 
-function render() {
-  renderBreweries();
-}
-
-stateForm.addEventListener("submit", (e) => {
+searchByStateForm.addEventListener("submit", (e) => {
   e.preventDefault();
 
   const thisUSState = e.target[0].value.split(" ").join("_");
@@ -125,3 +123,110 @@ typeFilter.addEventListener("change", () => {
 });
 
 init();
+
+// Extension 1
+/*
+const breweriesListHeading = document.querySelector("h1");
+
+function renderSearchBar() {
+  const header = document.createElement("header");
+  header.classList.add("search-bar");
+
+  const form = document.createElement("form");
+  form.id = "search-breweries-form";
+  form.autocomplete = "off";
+  header.append(form);
+
+  const label = document.createElement("label");
+  label.for = "search-breweries";
+  const labelContent = document.createElement("h2");
+  labelContent.innerText = "Search breweries:";
+  label.append(labelContent);
+
+  const input = document.createElement("input");
+  input.id = "search-breweries";
+  input.name = "search-breweries";
+  input.type = "text";
+
+  form.append(label, input);
+
+  breweriesListHeading.after(header);
+}
+*/
+
+const searchByNameForm = document.querySelector("#search-breweries-form");
+
+searchByNameForm.addEventListener("input", (e) => {
+  const input = e.target.value;
+
+  if (!input) {
+    init();
+  } else {
+    fetch(`${apiURL}?by_name=${input}&per_page=20`)
+      .then((res) => res.json())
+      .then((breweries) => {
+        setState({ breweries: getAllowedBreweriesByType(breweries) });
+        render();
+      });
+  }
+});
+
+// Extension 2
+const cityFilterForm = document.querySelector("#filter-by-city-form");
+const clearAllBtn = document.querySelector(".clear-all-btn");
+
+clearAllBtn.addEventListener("click", () => {
+  console.log("click");
+  setState({ citiesCheckBoxList: [] });
+  renderCityBoxList();
+});
+
+function getCityList() {
+  state.breweries.forEach((brewery) => {
+    if (!state.citiesCheckBoxList.includes(brewery.city)) {
+      state.citiesCheckBoxList.push(brewery.city);
+    }
+  });
+}
+
+function renderCityCheckbox(city) {
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.name = city;
+  input.value = city;
+
+  const label = document.createElement("label");
+  label.for = city;
+  label.innerText = city;
+
+  cityFilterForm.append(input, label);
+}
+
+function renderCityBoxList() {
+  cityFilterForm.innerHTML = "";
+
+  getCityList();
+
+  state.citiesCheckBoxList.forEach((city) => {
+    renderCityCheckbox(city);
+  });
+}
+
+cityFilterForm.addEventListener("change", (e) => {
+  const selectedCity = e.target.value;
+  const match = state.cities.includes(selectedCity);
+  if (match) {
+    state.cities = state.cities.filter((city) => city !== selectedCity);
+  } else {
+    state.cities.push(selectedCity);
+  }
+
+  console.log(state.cities);
+  console.log(e.target.value);
+  console.log(cityFilterForm.value);
+});
+
+function render() {
+  renderBreweries();
+  renderCityBoxList();
+}
