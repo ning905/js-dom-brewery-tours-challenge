@@ -7,7 +7,7 @@ const state = {
   allowedBreweryTypes: ["micro", "brewpub", "regional"],
   usState: "",
   breweries: [],
-  cities: [],
+  filter: { cities: [], type: "" },
   citiesCheckBoxList: [],
 };
 
@@ -64,7 +64,17 @@ function renderBrewery(brewery) {
 function renderBreweries() {
   breweriesUL.innerHTML = "";
 
-  state.breweries.forEach((brewery) => {
+  let breweriesToRender = state.breweries.filter((brewery) =>
+    state.filter.cities.includes(brewery.city)
+  );
+
+  if (state.filter.type) {
+    breweriesToRender = breweriesToRender.filter(
+      (brewery) => brewery.brewery_type === state.filter.type
+    );
+  }
+
+  breweriesToRender.forEach((brewery) => {
     renderBrewery(brewery);
   });
 }
@@ -110,16 +120,9 @@ typeFilter.addEventListener("change", () => {
   const thisType = typeFilter.value;
   console.log(thisType);
 
-  if (!thisType) {
-    init();
-  } else {
-    fetch(`${apiURL}?by_type=${thisType}&per_page=20`)
-      .then((res) => res.json())
-      .then((breweries) => {
-        setState({ breweries: breweries });
-        render();
-      });
-  }
+  state.filter.type = thisType;
+
+  renderBreweries();
 });
 
 init();
@@ -175,58 +178,74 @@ searchByNameForm.addEventListener("input", (e) => {
 const cityFilterForm = document.querySelector("#filter-by-city-form");
 const clearAllBtn = document.querySelector(".clear-all-btn");
 
+clearAllBtn.style.cursor = "pointer";
 clearAllBtn.addEventListener("click", () => {
-  console.log("click");
   setState({ citiesCheckBoxList: [] });
   renderCityBoxList();
 });
 
-function getCityList() {
+function getCityCheckBoxList() {
+  state.citiesCheckBoxList = [];
   state.breweries.forEach((brewery) => {
     if (!state.citiesCheckBoxList.includes(brewery.city)) {
       state.citiesCheckBoxList.push(brewery.city);
     }
   });
+  state.filter.cities = state.citiesCheckBoxList;
+}
+
+function updateCheckedCities(checkbox, selected) {
+  if (checkbox.checked) {
+    state.filter.cities.push(selected);
+  } else {
+    state.filter.cities = state.filter.cities.filter(
+      (city) => city !== selected
+    );
+  }
 }
 
 function renderCityCheckbox(city) {
-  const input = document.createElement("input");
-  input.type = "checkbox";
-  input.name = city;
-  input.value = city;
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.name = city;
+  checkbox.value = city;
+  checkbox.checked = state.filter.cities.includes(city);
 
   const label = document.createElement("label");
   label.for = city;
   label.innerText = city;
 
-  cityFilterForm.append(input, label);
+  cityFilterForm.append(checkbox, label);
+
+  checkbox.addEventListener("change", (e) => {
+    const thisCity = e.target.value;
+
+    updateCheckedCities(checkbox, thisCity);
+
+    renderBreweries();
+  });
+
+  label.addEventListener("dblclick", (e) => {
+    const thisCity = e.target.for;
+    checkbox.checked = !checkbox.checked;
+
+    updateCheckedCities(checkbox, thisCity);
+
+    renderBreweries();
+  });
 }
 
 function renderCityBoxList() {
   cityFilterForm.innerHTML = "";
 
-  getCityList();
+  getCityCheckBoxList();
 
   state.citiesCheckBoxList.forEach((city) => {
     renderCityCheckbox(city);
   });
 }
 
-cityFilterForm.addEventListener("change", (e) => {
-  const selectedCity = e.target.value;
-  const match = state.cities.includes(selectedCity);
-  if (match) {
-    state.cities = state.cities.filter((city) => city !== selectedCity);
-  } else {
-    state.cities.push(selectedCity);
-  }
-
-  console.log(state.cities);
-  console.log(e.target.value);
-  console.log(cityFilterForm.value);
-});
-
 function render() {
-  renderBreweries();
   renderCityBoxList();
+  renderBreweries();
 }
