@@ -9,6 +9,9 @@ const state = {
   breweries: [],
   filter: { cities: [], type: "" },
   citiesCheckBoxList: [],
+  pages: "",
+  currentPage: 1,
+  numberPerPage: 10,
 };
 
 function setState(newState) {
@@ -74,7 +77,15 @@ function renderBreweries() {
     );
   }
 
-  breweriesToRender.forEach((brewery) => {
+  state.pages = Math.ceil(breweriesToRender.length / state.numberPerPage);
+  console.log("total pages: " + state.pages);
+  console.log("current page: " + state.currentPage);
+
+  const trimStart = (state.currentPage - 1) * state.numberPerPage;
+  const trimEnd = trimStart + state.numberPerPage;
+  const breweriesOnThisPage = breweriesToRender.slice(trimStart, trimEnd);
+
+  breweriesOnThisPage.forEach((brewery) => {
     renderBrewery(brewery);
   });
 }
@@ -88,7 +99,7 @@ function getAllowedBreweriesByType(breweries) {
 }
 
 function init() {
-  fetch(apiURL)
+  fetch(`${apiURL}?per_page=500`)
     .then((res) => res.json())
     .then((breweries) => {
       setState({ breweries: getAllowedBreweriesByType(breweries) });
@@ -107,7 +118,7 @@ searchByStateForm.addEventListener("submit", (e) => {
     console.log(thisUSState);
     setState({ usState: thisUSState });
 
-    fetch(`${apiURL}?by_state=${state.usState}&per_page=20`)
+    fetch(`${apiURL}?by_state=${state.usState}&per_page=500`)
       .then((res) => res.json())
       .then((breweries) => {
         setState({ breweries: getAllowedBreweriesByType(breweries) });
@@ -123,6 +134,7 @@ typeFilter.addEventListener("change", () => {
   state.filter.type = thisType;
 
   renderBreweries();
+  renderButtons();
 });
 
 init();
@@ -165,7 +177,7 @@ searchByNameForm.addEventListener("input", (e) => {
   if (!input) {
     init();
   } else {
-    fetch(`${apiURL}?by_name=${input}&per_page=20`)
+    fetch(`${apiURL}?by_name=${input}&per_page=500`)
       .then((res) => res.json())
       .then((breweries) => {
         setState({ breweries: getAllowedBreweriesByType(breweries) });
@@ -181,7 +193,7 @@ const clearAllBtn = document.querySelector(".clear-all-btn");
 clearAllBtn.style.cursor = "pointer";
 clearAllBtn.addEventListener("click", () => {
   setState({ citiesCheckBoxList: [] });
-  renderCityBoxList();
+  render();
 });
 
 function getCityCheckBoxList() {
@@ -223,6 +235,7 @@ function renderCityCheckbox(city) {
     updateCheckedCities(checkbox, thisCity);
 
     renderBreweries();
+    renderButtons();
   });
 
   label.addEventListener("dblclick", (e) => {
@@ -245,7 +258,71 @@ function renderCityBoxList() {
   });
 }
 
+//extension 3
+const container = document.querySelector("#breweries-list-container");
+const buttonContainer = document.createElement("div");
+buttonContainer.classList.add("btn-container");
+
+function createPreviousBtn() {
+  const previous = document.createElement("button");
+  previous.classList.add("page-btn");
+  previous.innerText = "Previous";
+
+  previous.addEventListener("click", () => {
+    state.currentPage--;
+
+    renderBreweries();
+    renderButtons();
+  });
+
+  return previous;
+}
+
+function createNextBtn() {
+  const next = document.createElement("button");
+  next.classList.add("page-btn");
+  next.innerText = "Next";
+
+  next.addEventListener("click", () => {
+    state.currentPage++;
+
+    renderBreweries();
+    renderButtons();
+  });
+
+  return next;
+}
+
+function createCurrentPage() {
+  const currentPage = document.createElement("p");
+  currentPage.innerText = state.currentPage;
+
+  return currentPage;
+}
+
+function renderButtons() {
+  buttonContainer.innerHTML = "";
+  container.append(buttonContainer);
+
+  const currentPage = createCurrentPage();
+  const previous = createPreviousBtn();
+  const next = createNextBtn();
+
+  if (state.pages > 1) {
+    buttonContainer.append(currentPage, next);
+
+    if (state.currentPage > 1) {
+      buttonContainer.insertBefore(previous, buttonContainer.children[0]);
+
+      if (state.currentPage === state.pages) {
+        buttonContainer.removeChild(next);
+      }
+    }
+  }
+}
+
 function render() {
   renderCityBoxList();
   renderBreweries();
+  renderButtons();
 }
