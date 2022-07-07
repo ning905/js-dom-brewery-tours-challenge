@@ -78,6 +78,12 @@ function renderBreweries() {
   }
 
   state.pages = Math.ceil(breweriesToRender.length / state.numberPerPage);
+  if (state.currentPage > state.pages) {
+    state.currentPage = state.pages;
+  }
+  if (state.currentPage < 1) {
+    state.currentPage = 1;
+  }
   console.log("total pages: " + state.pages);
   console.log("current page: " + state.currentPage);
 
